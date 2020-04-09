@@ -105,7 +105,7 @@ class Environment:
                     self.planets[planet_id].ships[player_id] -= 1
                     self.gate.ships[player_id] += 1
         else:
-            card = self.player_hand[player_id].pop(action_id)
+            card = self.player_hand[player_id].pop(action_id - 9)
             if player_id == self.offender_id:
                 self.gate.offend_card = card
             else:
@@ -131,20 +131,19 @@ class Environment:
         return self.Const.ACTION_SHIP if len(self.player_turns) > 2 else self.Const.ACTION_CARD
 
     def available_actions(self):
-        ships, card = 0, 0
-
-        if self.player_turns[0] == self.offender_id:
-            ships = np.arange(5)
-        else:
+        if self.action_type() == self.Const.ACTION_SHIP:
+            ships = 0
             ships_on_planets = self.__get_ships_on_planets_by_player_id(self.player_turns[0])
             for (planet_id, nrof_ship) in ships_on_planets:
                 ships += nrof_ship
             ships = self.Const.MAX_SHIPS_PER_PLANET if ships > self.Const.MAX_SHIPS_PER_PLANET else ships
-            ships = np.array([0] + [ship + 1 for ship in range(ships)] + [ship + 5 for ship in range(ships)])
+            action_ind = np.arange(ships + 1)
+            if self.player_turns[0] != self.offender_id:
+                action_ind = np.hstack((action_ind, np.arange(5, 5 + ships)))
+        else:
+            action_ind = np.where(np.array(self.player_hand[self.player_turns[0]]) != self.Const.NO_CARD)[0] + 9
 
-        card = np.where(np.array(self.player_hand[self.player_turns[0]]) != self.Const.NO_CARD)[0]
-
-        return ships, card
+        return action_ind
 
     # observation consists of:
     # 1. offender id, defender id, defender planet id
