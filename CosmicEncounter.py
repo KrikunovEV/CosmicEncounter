@@ -16,7 +16,7 @@ class Environment:
         GATE_HOME_ID: int = -2
         ACTION_SHIP: int = 0
         ACTION_CARD: int = 1
-        PLANETS_TO_WIN: int = 5
+        PLANETS_TO_WIN: int = 4
 
     class Planet:
         def __init__(self, owner_id: int, ships: List[int]):
@@ -261,13 +261,13 @@ class Environment:
 
         max_offended_planets = max(self.warp.planet_counter)
         if max_offended_planets == self.Const.PLANETS_TO_WIN or len(self.deck) == 0:
-            print()
+            #print()
             if len(self.deck) == 0:
                 print('Terminal state reached. The deck is over!')
             else:
                 print('Terminal state reached. Max number of planets was achieved by players!')
-            print(self.__str__(True, True, True, True, True))
-            print()
+            #print(self.__str__(True, True, True, True, True))
+            #print()
             terminal = True
             for player_id in range(self.nrof_players):
                 if self.warp.planet_counter[player_id] == max_offended_planets:
@@ -316,8 +316,8 @@ class Environment:
 
     # Only debug information, presents game state
     def __str__(self, planet: bool = False, warp: bool = False, gate: bool = False, deck: bool = False, hand: bool = False):
-        #desc = '\nCosmic Encounter environment:\n\n'
-        desc = ''
+        desc = '\nCosmic Encounter environment:\n\n'
+        #desc = ''
         if planet:
             for id, planet in enumerate(self.planets):
                 desc += 'planet ' + str(id) + ':\n' + str(planet) + '\n'

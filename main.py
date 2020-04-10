@@ -1,21 +1,27 @@
 from CosmicEncounter import Environment
-import numpy as np
-
-env = Environment(nrof_players=5, nrof_planets_per_player=3)
+from Agent import Agent
 
 
-obs, terminal, players, reward = env.reset()
-while not terminal:
-    player_id = env.whose_turn()[0]
-    (ships, cards) = env.available_actions()
-    action_type = env.action_type()
-    action_id = np.random.choice(ships if action_type == Environment.Const.ACTION_SHIP else cards)
-    '''
-    print('Offender:', env.who_offender())
-    print('Defender:', env.who_defender())
-    print('Player turns:', player_id)
-    print('Available actions:', ships, cards)
-    print('action is', action_id)
-    '''
-    obs, terminal, players, reward = env.action(action_id)
+players = 5
+env = Environment(nrof_players=players, nrof_planets_per_player=3)
+agents = [Agent(agent_id) for agent_id in range(players)]
 
+for episode in range(100000):
+    print('Episode:', episode)
+    obs, terminal, winners, reward = env.reset()
+
+    while not terminal:
+        agent_id = env.whose_turn()[0]
+        action_id = agents[agent_id](obs, env.action_type(), env.available_actions())
+        obs, terminal, winners, reward = env.action(action_id)
+        agents[agent_id].reward(reward)
+
+        if terminal:
+            for agent_id in winners:
+                agents[agent_id].reward_win(reward)
+
+    for agent_id in range(players):
+        agents[agent_id].train(obs)
+
+for agent_id in range(players):
+    agents[agent_id].save_agent_state()
