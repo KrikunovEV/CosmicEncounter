@@ -11,7 +11,7 @@ class Agent:
         self.model = MLP(state_space=110, action_space=14)
         self.optim = optim.Adam(self.model.parameters(), lr=0.0001)
         self.logs, self.entropies, self.values, self.rewards = [], [], [], []
-        self.losses = []
+        self.losses, self.episode_mean_values = [], []
         self.parties_won = 0
 
     def __call__(self, obs, action_type, available_actions):
@@ -58,20 +58,23 @@ class Agent:
         loss.backward()
         self.optim.step()
 
+        self.episode_mean_values.append(torch.mean(torch.Tensor(self.values)))
         self.values, self.entropies, self.spatial_entropies, self.logs, self.rewards = [], [], [], [], []
 
-    def save_agent_state(self):
+    def save_agent_state(self, directory: str):
         state = {
             'model_state': self.model.state_dict(),
             'optim_state': self.optim.state_dict(),
             'losses': self.losses,
+            'mean_values': self.episode_mean_values,
             'parties_won': self.parties_won
         }
-        torch.save(state, 'models/' + str(self.agent_id) + '.pt')
+        torch.save(state, directory + str(self.agent_id) + '.pt')
 
     def load_agent_state(self, path: str):
         state = torch.load(path)
         self.model.load_state_dict(state['model_state'])
         self.optim.load_state_dict(state['optim_state'])
         self.losses = state['losses']
+        self.episode_mean_values = state['mean_values']
         self.parties_won = state['parties_won']
