@@ -10,13 +10,12 @@ class Environment:
         MAX_SHIPS_PER_PLANET: int = 4
         MORPH_CARD: int = -1
         NEGOTIATE_CARD: int = 0
-        NO_CARD: int = -2
         CARDS_IN_HAND: int = 5
         WARP_HOME_ID: int = -1
         GATE_HOME_ID: int = -2
         ACTION_SHIP: int = 0
         ACTION_CARD: int = 1
-        PLANETS_TO_WIN: int = 4
+        PLANETS_TO_WIN: int = 5
 
     class Planet:
         def __init__(self, owner_id: int, ships: List[int]):
@@ -69,6 +68,7 @@ class Environment:
 
         self.gate = self.Gate(self.nrof_players)
 
+        self.drop = []
         self.deck = [self.Const.MORPH_CARD]
         self.deck += [self.Const.NEGOTIATE_CARD] * 15
         self.deck += [1] + [4] * 4 + [5] + [6] * 7 + [7] + [8] * 7 + [9] + [10] * 4 + [11] + [12] * 2 + [13] + [14] * 2\
@@ -106,6 +106,7 @@ class Environment:
                     self.gate.ships[player_id] += 1
         else:
             card = self.player_hand[player_id].pop(action_id - 9)
+            self.drop.append(card)
             if player_id == self.offender_id:
                 self.gate.offend_card = card
             else:
@@ -141,7 +142,7 @@ class Environment:
             if self.player_turns[0] != self.offender_id:
                 action_ind = np.hstack((action_ind, np.arange(5, 5 + ships)))
         else:
-            action_ind = np.where(np.array(self.player_hand[self.player_turns[0]]) != self.Const.NO_CARD)[0] + 9
+            action_ind = np.arange(9, 14)
 
         return action_ind
 
@@ -202,10 +203,11 @@ class Environment:
 
         for player_id in range(self.nrof_players):
             if len(self.player_hand[player_id]) < self.Const.CARDS_IN_HAND:
-                if len(self.deck) > 0:
-                    self.player_hand[player_id].append(self.deck.pop(0))
-                else:
-                    self.player_hand[player_id].append(self.Const.NO_CARD)
+                if len(self.deck) == 0:
+                    np.random.shuffle(self.drop)
+                    self.deck += self.drop
+                    self.drop = []
+                self.player_hand[player_id].append(self.deck.pop(0))
 
     # Takes into account:
     # 1. Morph card
@@ -260,12 +262,9 @@ class Environment:
         reward = 1.
 
         max_offended_planets = max(self.warp.planet_counter)
-        if max_offended_planets == self.Const.PLANETS_TO_WIN or len(self.deck) == 0:
+        if max_offended_planets == self.Const.PLANETS_TO_WIN:
             #print()
-            if len(self.deck) == 0:
-                print('Terminal state reached. The deck is over!')
-            else:
-                print('Terminal state reached. Max number of planets was achieved by players!')
+            print('Terminal state reached. Max number of planets was achieved by players!')
             #print(self.__str__(True, True, True, True, True))
             #print()
             terminal = True
