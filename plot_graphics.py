@@ -21,8 +21,9 @@ for i in range(5):
     ax[1][i].plot(median_filter(values, 3))
     ax[1][i].set_xlabel('episode')
     ax[1][i].set_ylabel('mean value')
-    ax[1][i].set_yticks(np.arange(0, 20, 2))
+    ax[1][i].set_yticks(np.arange(0, 20, 2))  # 0, 20, 2 | 0, 30, 3
 fig.tight_layout()
 
-plt.show()
+plt.savefig('1000_episodes.png')
+#plt.show()
 
