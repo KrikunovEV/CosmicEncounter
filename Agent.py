@@ -15,7 +15,7 @@ class Agent:
         self.parties_won = 0
 
     def __call__(self, obs, action_type, available_actions):
-        logits, value = self.model(obs)
+        logits, value, negotiation = self.model(obs)
         entropy = -(functional.log_softmax(logits, dim=-1) * functional.softmax(logits, dim=-1)).sum()
 
         logits = logits[available_actions]
@@ -38,7 +38,7 @@ class Agent:
         self.rewards[-1] = reward
 
     def train(self, obs):
-        _, G = self.model(obs)
+        _, G, _ = self.model(obs)
         G = G.detach().item()
 
         value_loss = 0
@@ -59,7 +59,7 @@ class Agent:
         self.optim.step()
 
         self.episode_mean_values.append(torch.mean(torch.Tensor(self.values)))
-        self.values, self.entropies, self.spatial_entropies, self.logs, self.rewards = [], [], [], [], []
+        self.values, self.entropies, self.logs, self.rewards = [], [], [], []
 
     def save_agent_state(self, directory: str):
         state = {

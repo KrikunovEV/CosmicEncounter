@@ -6,7 +6,7 @@ players = 5
 env = Environment(nrof_players=players, nrof_planets_per_player=3)
 agents = [Agent(agent_id) for agent_id in range(players)]
 
-for episode in range(5000):
+for episode in range(1000):
     print('Episode:', episode)
     obs, terminal, winners, reward = env.reset()
 
@@ -24,4 +24,4 @@ for episode in range(5000):
         agents[agent_id].train(obs)
 
 for agent_id in range(players):
-    agents[agent_id].save_agent_state(directory='models_5000/')
+    agents[agent_id].save_agent_state(directory='models_1000/')

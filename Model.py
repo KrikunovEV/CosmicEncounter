@@ -16,12 +16,17 @@ class MLP(nn.Module):
 
         self.policy = nn.Linear(64, action_space)
         self.value = nn.Linear(64, 1)
+        self.negotiation = nn.Sequential(
+            nn.Linear(64, 10),
+            nn.Tanh()
+        )
 
     def forward(self, data):
         mlp_data = self.mlp(torch.Tensor(data))
         logits = self.policy(mlp_data)
         value = self.value(mlp_data)
-        return logits, value
+        negotiation = self.negotiation(mlp_data.detach())
+        return logits, value, negotiation
 
     def __preprocess(self, data):
         return torch.log(data)
