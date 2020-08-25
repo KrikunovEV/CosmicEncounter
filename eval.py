@@ -1,7 +1,7 @@
 from CosmicEncounter import Environment
 from Agent import Agent
 import numpy as np
-from torch import Tensor, zeros
+from torch import zeros
 import matplotlib.pyplot as plt
 
 
@@ -28,8 +28,6 @@ agents[2].parties_won = 0
 agents[3].parties_won = 0
 agents[4].parties_won = 0
 
-values = [[], [], [], [], []]
-
 for episode in range(1000):
     print('Episode:', episode)
     obs, terminal, winners, reward = env.reset()
@@ -48,23 +46,22 @@ for episode in range(1000):
             for agent_id in winners:
                 agents[agent_id].reward_win(reward)
 
-    for agent_id in range(players):
-        values[agent_id].append(Tensor(agents[agent_id].values).mean().item())
-        agents[agent_id].values = []
-
-for agent_id in range(players):
-    print('Agent id: ' + str(agent_id) + '; wins: ' + str(agents[agent_id].parties_won))
-
 fig, ax = plt.subplots(1, 5, figsize=(16, 9))
 for agent_id in range(players):
+    print('Agent id: ' + str(agent_id) + '; wins: ' + str(agents[agent_id].parties_won) + '; score = ' + str(
+        agents[agent_id].reward_cum[-1]))
     if agent_id == 0:
-        ax[agent_id].set_title('Communication agent: ' + str(agents[agent_id].parties_won))
+        ax[agent_id].set_title('Communication agent. wins:' + str(agents[agent_id].parties_won) + '; score = ' + str(
+        agents[agent_id].reward_cum[-1]))
     elif agent_id != 4:
-        ax[agent_id].set_title('Noncommunication agent: ' + str(agents[agent_id].parties_won))
+        ax[agent_id].set_title('Noncommunication agent. wins:' + str(agents[agent_id].parties_won) + '; score = ' + str(
+        agents[agent_id].reward_cum[-1]))
     else:
-        ax[agent_id].set_title('Random agent: ' + str(agents[agent_id].parties_won))
-    ax[agent_id].plot(values[agent_id])
+        ax[agent_id].set_title('Random agent. wins:' + str(agents[agent_id].parties_won) + '; score = ' + str(
+        agents[agent_id].reward_cum[-1]))
+    ax[agent_id].plot(agents[agent_id].reward_cum)
     ax[agent_id].set_xlabel('episode')
-    ax[agent_id].set_ylabel('mean value')
+    ax[agent_id].set_ylabel('cumulative reward')
+    ax[agent_id].set_yticks(np.arange(0, 801, 100))
 fig.tight_layout()
-plt.show()
+plt.savefig('eval/exp_1.png')
