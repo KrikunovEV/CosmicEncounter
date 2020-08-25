@@ -1,4 +1,4 @@
-from Model import MLP
+from Model2 import MLP
 import numpy as np
 import torch
 import torch.nn.functional as functional
@@ -6,9 +6,10 @@ import torch.optim as optim
 
 
 class Agent:
-    def __init__(self, agent_id: int):
+    def __init__(self, agent_id: int, nrof_players: int, negotiation_map):
         self.agent_id = agent_id
-        self.model = MLP(state_space=110, action_space=14)
+        self.model = MLP(state_space=110 + (nrof_players - 1) * 10, action_space=14, agent_id=agent_id,
+                         negotiation_map=negotiation_map)
         self.optim = optim.Adam(self.model.parameters(), lr=0.0001)
         self.logs, self.entropies, self.values, self.rewards = [], [], [], []
         self.losses, self.episode_mean_values = [], []
@@ -22,13 +23,14 @@ class Agent:
         policy = functional.softmax(logits, dim=-1)
 
         action_id = np.random.choice(policy.shape[0], 1, p=policy.detach().numpy())[0]
+        #action_id = policy.argmax()
         prob = policy[action_id]
 
         self.logs.append(torch.log(prob))
         self.entropies.append(entropy)
         self.values.append(value)
 
-        return available_actions[action_id]
+        return available_actions[action_id], negotiation
 
     def reward(self, reward):
         self.rewards.append(reward)
@@ -37,7 +39,7 @@ class Agent:
         self.parties_won += 1
         self.rewards[-1] = reward
 
-    def train(self, obs):
+    def train(self, obs, last: bool):
         _, G, _ = self.model(obs)
         G = G.detach().item()
 
@@ -55,7 +57,7 @@ class Agent:
         self.losses.append(loss.item())
 
         self.optim.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=not last)
         self.optim.step()
 
         self.episode_mean_values.append(torch.mean(torch.Tensor(self.values)))

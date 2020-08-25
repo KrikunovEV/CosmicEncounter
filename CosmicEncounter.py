@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass
 from typing import List
+import torch
 
 
 class Environment:
@@ -55,6 +56,7 @@ class Environment:
     # 4. Deck
     # 5. Players' hand
     # 6. Random offender
+    # 8. Negotiation observation
     # 7. Resets round
     def reset(self):
         self.planets = []
@@ -83,13 +85,16 @@ class Environment:
         self.offender_id = np.random.randint(0, self.nrof_players)
 
         self.__reset_round()
+        self.negotiation_obs = [torch.zeros(10, requires_grad=False)] * self.nrof_players
 
         return self.__make_observation(), False, [], 0
 
-    def action(self, action_id: int):
+    def action(self, action_id: int, negotiation):
         terminal, players, reward = False, [], 0
         action_type = self.action_type()
         player_id = self.player_turns.pop(0)
+
+        self.negotiation_obs[player_id] = negotiation
 
         if action_type == self.Const.ACTION_SHIP:
             if action_id == 0 and player_id == self.offender_id:
@@ -154,14 +159,14 @@ class Environment:
     # 5. hand of player who turns now
     # ...
     # do we need to insert info about players' turns ?
-    def __make_observation(self) -> np.ndarray:
+    def __make_observation(self):
         observation = [self.offender_id, self.defender_id, self.defender_planet_id]
         for planet in self.planets:
             observation += [planet.owner_id] + planet.ships
         observation += [self.warp.owner_id] + self.warp.ships
         observation += [self.gate.owner_id] + self.gate.ships
         observation += self.player_hand[self.player_turns[0]]
-        return np.array(observation, dtype=np.float_)
+        return np.array(observation, dtype=np.float_), self.negotiation_obs
 
     # responsible for:
     # 1. Reset Gate
@@ -170,6 +175,7 @@ class Environment:
     # 4. Determine players who can participate
     # 5. Regroup (compensate ship to offender)
     # 6. Fill hand up to CARDS_IN_HAND
+    # 7. Negotiation observation
     def __reset_round(self):
         self.gate.offend_card = None
         self.gate.defend_card = None
@@ -209,10 +215,12 @@ class Environment:
                     self.drop = []
                 self.player_hand[player_id].append(self.deck.pop(0))
 
+        #self.negotiation_obs = [torch.zeros(10, requires_grad=False)] * self.nrof_players
+
     # Takes into account:
     # 1. Morph card
     # 2. If both card are Negotiate - return ships on planets
-    # 3. If one side is Negotiate - another side win
+    # 3. If one of side is Negotiate - another side win
     # 4. Whose attack power is greater, the side will win
     def __do_encounter(self):
         if self.gate.offend_card == self.Const.MORPH_CARD:
@@ -253,8 +261,7 @@ class Environment:
         self.offender_id = (self.offender_id + 1) if (self.offender_id + 1) < self.nrof_players else 0
 
     # Game terminals if:
-    # 1. Deck is empty
-    # 2. A player achieve max number of not home planets
+    # 1. A player achieve max number of not home planets
     # *. Reward shares uniformly between player which have the same number of offended planets
     def __check_win_condition(self):
         players = []

@@ -12,16 +12,21 @@ class MLP(nn.Module):
         self.dummy_tensor = torch.zeros(10, requires_grad=False)
 
         self.mlp = nn.Sequential(
-            nn.Linear(state_space, state_space),
+            nn.Linear(110, 110),
             nn.ReLU(),
-            nn.Linear(state_space, 64),
+            nn.Linear(110, 64),
             nn.ReLU(),
         )
 
-        self.policy = nn.Linear(64, action_space)
-        self.value = nn.Linear(64, 1)
+        self.mlp_neg = nn.Sequential(
+            nn.Linear(40, 40),
+            nn.Tanh(),
+        )
+
+        self.policy = nn.Linear(104, action_space)
+        self.value = nn.Linear(104, 1)
         self.negotiation = nn.Sequential(
-            nn.Linear(64, 10),
+            nn.Linear(104, 10),
             nn.Tanh()
         )
 
@@ -34,9 +39,8 @@ class MLP(nn.Module):
                 negotiation = torch.cat((negotiation, data[1][i]))
             else:
                 negotiation = torch.cat((negotiation, self.dummy_tensor))
-        state = torch.cat((torch.Tensor(data[0]), negotiation), dim=-1)
+        embeddings = torch.cat((self.mlp(torch.Tensor(data[0])), self.mlp_neg(negotiation)), dim=-1)
 
-        embeddings = self.mlp(torch.Tensor(state))
         logits = self.policy(embeddings)
         value = self.value(embeddings)
         negotiation = self.negotiation(embeddings.detach())
