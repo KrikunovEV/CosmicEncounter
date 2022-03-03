@@ -49,42 +49,41 @@ class MLP2(nn.Module):
         super(MLP2, self).__init__()
 
         self.negotiation_map = negotiation_map
+        self.dummy_tensor = torch.zeros((1, 10))
         self.agent_id = agent_id
-        self.dummy_tensor = torch.zeros(10, requires_grad=False)
 
         self.mlp = nn.Sequential(
-            nn.Linear(110, 110),
+            nn.Linear(110 + 50, 110 + 50),
             nn.ReLU(),
-            nn.Linear(110, 64),
+            nn.Linear(110 + 50, 64),
             nn.ReLU(),
         )
 
         self.mlp_neg = nn.Sequential(
-            nn.Linear(40, 40),
+            nn.Linear(110 + 50, 50),
             nn.Tanh(),
         )
 
-        self.policy = nn.Linear(104, action_space)
-        self.value = nn.Linear(104, 1)
+        self.policy = nn.Linear(64, action_space)
+        self.value = nn.Linear(64, 1)
         self.negotiation = nn.Sequential(
-            nn.Linear(104, 10),
+            nn.Linear(64, 10),
             nn.Tanh()
         )
 
     def forward(self, data):
-        negotiation = torch.empty(0)
+        negotiation = data[1]
+        negotiation = negotiation + torch.randn(negotiation.size()) * 0.1
         for i in range(5):
-            if i == self.agent_id:
-                continue
-            elif i in self.negotiation_map[self.agent_id]:
-                negotiation = torch.cat((negotiation, data[1][i]))
-            else:
-                negotiation = torch.cat((negotiation, self.dummy_tensor))
+            if i not in self.negotiation_map or self.agent_id not in self.negotiation_map:
+                negotiation = torch.cat([negotiation[:i], self.dummy_tensor, negotiation[i + 1:]], 0)
+        negotiation = negotiation.view(-1)
+        obs = torch.Tensor(data[0])
 
-        embedding = self.mlp_neg(negotiation) * negotiation
+        negotiation_input = torch.cat((obs, negotiation), dim=-1)
+        negotiation_output = self.mlp_neg(negotiation_input) * negotiation
 
-        embedding = torch.cat((self.mlp(torch.Tensor(data[0])), embedding), dim=-1)
-
+        embedding = self.mlp(torch.cat((obs, negotiation_output), dim=-1))
         logits = self.policy(embedding)
         value = self.value(embedding)
         negotiation = self.negotiation(embedding.detach())

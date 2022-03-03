@@ -1,11 +1,14 @@
 import torch
 import numpy as np
 
-data = np.arange(15) - 5
-np.random.shuffle(data)
-a = torch.Tensor(data)
+print([] + [50, 100] + [1])
+
+a = torch.rand(5, 4)
+b = torch.zeros(1, 4, requires_grad=True)
 
 print(a)
-print(torch.tanh(a))
-print(torch.tanh(a).view(3, 5))
-print(torch.tanh(a).view(3, 5).prod(0))
+
+idx = 0
+c = torch.cat([a[:idx], b, a[idx + 1:]], 0)
+print(a[:idx].shape, b.shape, a[idx + 1:].shape)
+print(c)

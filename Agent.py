@@ -8,11 +8,13 @@ import torch.optim as optim
 class Agent:
     def __init__(self, agent_id: int, nrof_players: int, negotiation_map):
         self.agent_id = agent_id
-        self.model = MLP2(state_space=110 + (nrof_players - 1) * 10, action_space=14, agent_id=agent_id,
-                         negotiation_map=negotiation_map)
-        self.optim = optim.SGD(self.model.parameters(), lr=0.0001)
+        self.original_agent_id = agent_id
+        self.model = MLP2(state_space=110 + (nrof_players - 1) * 10, action_space=14,
+                          agent_id=agent_id, negotiation_map=negotiation_map)
+        self.optim = optim.SGD(self.model.parameters(), lr=0.00001)
         self.logs, self.entropies, self.values, self.rewards = [], [], [], []
         self.losses, self.episode_mean_values = [], []
+        self.grad_W, self.grad_b = [], []
         self.parties_won = 0
         self.reward_cum = [0]
 
@@ -23,8 +25,8 @@ class Agent:
         logits = logits[available_actions]
         policy = functional.softmax(logits, dim=-1)
 
-        action_id = np.random.choice(policy.shape[0], 1, p=policy.detach().numpy())[0]
-        #action_id = policy.argmax()
+        #action_id = np.random.choice(policy.shape[0], 1, p=policy.detach().numpy())[0]
+        action_id = policy.argmax()
         prob = policy[action_id]
 
         self.logs.append(torch.log(prob))
@@ -32,6 +34,10 @@ class Agent:
         self.values.append(value)
 
         return available_actions[action_id], negotiation
+
+    def get_negotiation(self, obs):
+        _, _, negotiation = self.model(obs)
+        return negotiation
 
     def reward(self, reward):
         self.rewards.append(reward)
@@ -65,6 +71,9 @@ class Agent:
         loss.backward(retain_graph=not last)
         self.optim.step()
 
+        self.grad_W.append(torch.norm(self.model.negotiation[0].weight.grad))
+        self.grad_b.append(torch.norm(self.model.negotiation[0].bias.grad))
+
         self.episode_mean_values.append(torch.mean(torch.Tensor(self.values)))
         self.values, self.entropies, self.logs, self.rewards = [], [], [], []
 
@@ -76,9 +85,12 @@ class Agent:
             'mean_values': self.episode_mean_values,
             'parties_won': self.parties_won,
             'reward_cum': self.reward_cum,
-            'episode_encounters': episode_encounters
+            'episode_encounters': episode_encounters,
+            'agent_id': self.original_agent_id,
+            'grad_W': self.grad_W,
+            'grad_b': self.grad_b
         }
-        torch.save(state, directory + str(self.agent_id) + '.pt')
+        torch.save(state, directory + str(self.original_agent_id) + '.pt')
 
     def load_agent_state(self, path: str):
         state = torch.load(path)
@@ -88,4 +100,5 @@ class Agent:
         self.episode_mean_values = state['mean_values']
         self.parties_won = state['parties_won']
         self.reward_cum = state['reward_cum']
+        self.original_agent_id = state['agent_id']
         return state['episode_encounters']

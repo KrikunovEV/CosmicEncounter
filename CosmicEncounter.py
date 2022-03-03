@@ -85,7 +85,6 @@ class Environment:
         self.offender_id = np.random.randint(0, self.nrof_players)
 
         self.__reset_round()
-        self.negotiation_obs = [torch.zeros(10, requires_grad=False)] * self.nrof_players
 
         return self.__make_observation(), False, [], 0
 
@@ -94,7 +93,8 @@ class Environment:
         action_type = self.action_type()
         player_id = self.player_turns.pop(0)
 
-        self.negotiation_obs[player_id] = negotiation
+        self.negotiation_obs = torch.cat([self.negotiation_obs[:player_id], negotiation.view(1, 10),
+                                          self.negotiation_obs[player_id + 1:]], 0)
 
         if action_type == self.Const.ACTION_SHIP:
             if action_id == 0 and player_id == self.offender_id:
@@ -123,6 +123,12 @@ class Environment:
             terminal, players, reward = self.__check_win_condition()
 
         return self.__make_observation(), terminal, players, reward
+
+    def update_negotiation(self, negotiations):
+        for negotiation in negotiations:
+            id = negotiation[0]
+            self.negotiation_obs = torch.cat([self.negotiation_obs[:id], negotiation[1].view(1, 10),
+                                              self.negotiation_obs[id + 1:]], 0)
 
     def whose_turn(self):
         return self.player_turns
@@ -215,7 +221,7 @@ class Environment:
                     self.drop = []
                 self.player_hand[player_id].append(self.deck.pop(0))
 
-        #self.negotiation_obs = [torch.zeros(10, requires_grad=False)] * self.nrof_players
+        self.negotiation_obs = torch.zeros((self.nrof_players, 10))
 
     # Takes into account:
     # 1. Morph card
